@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/times.h> // times()
-#include <time.h>
 #include <unistd.h>
 
 volatile sig_atomic_t unprocessedSig = 0;
@@ -14,45 +13,54 @@ int busywork(void) {
   struct sigaction act;
   struct tms buf;
   for (;;) {
-
-    if (unprocessedSig) {
-      unprocessedSig = 0;
-      struct rusage usage;
-      getrusage(RUSAGE_SELF, &usage);
-      printf("soy el hijo %d  tiempo activo %ld \n", getpid(),
-             usage.ru_stime.tv_sec);
-
-      exit(EXIT_SUCCESS);
-    }
   }
 }
 void handler(int signo) {
-    unprocessedSig = 1;
+  struct rusage usage;
+  getrusage(RUSAGE_SELF, &usage);
+  printf("soy el hijo %d  tiempo activo %ld \n", getpid(),
+  usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
+  // siendo usage.ru_utime el tiempo que mi cpu ejecuto el loop infinito
+  // y usage.ru_stime el tiempo que ocupo el sistema operativo en modo kernel
+  // la suma de ambos hace el tiempo total que ejecuto el proceso
+  exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
 
-    signal(SIGTERM,handler);
-
   int copias = atoi(argv[1]);
+    if (copias <1 ) {
+     
+        perror("copias no puede ser negativo\n");
+        exit(1);
+    }
+
+  signal(SIGTERM, handler);
+
+ 
   struct tms buf;
-  pid_t hijo;
-  clock_t inicio = clock();
+  pid_t hijos[copias];
 
   int tiempoMuerto = atoi(argv[2]);
 
   for (int i = 0; i < copias; i++) {
-    hijo = fork();
+    hijos[i] = fork();
 
-    if (hijo == 0) {
+    if (hijos[i] == 0) {
       busywork();
     }
   }
-
-  sleep(tiempoMuerto);
-  kill(hijo, SIGTERM);
-
-
+  if(tiempoMuerto!=0){
+    sleep(tiempoMuerto);
+    for (int i = 0; i < copias; i++) {
+  
+    kill(hijos[i], SIGTERM);
+  
+    }
+  }
+  else {
+  busywork();
+  }
   // aca asesino a todos los hijos, despues del tiempo
   // prioridad: basicamente hacer que los procesos tengan
   // prioridad en el tiempo de cpu
