@@ -19,7 +19,7 @@ void handler(int signo) {
   struct rusage usage;
   getrusage(RUSAGE_SELF, &usage);
   printf("soy el hijo %d  tiempo activo %ld \n", getpid(),
-  usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
+         usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
   // siendo usage.ru_utime el tiempo que mi cpu ejecuto el loop infinito
   // y usage.ru_stime el tiempo que ocupo el sistema operativo en modo kernel
   // la suma de ambos hace el tiempo total que ejecuto el proceso
@@ -29,37 +29,43 @@ void handler(int signo) {
 int main(int argc, char *argv[]) {
 
   int copias = atoi(argv[1]);
-    if (copias <1 ) {
-     
-        perror("copias no puede ser negativo\n");
-        exit(1);
-    }
+  int tiempoMuerto = atoi(argv[2]);
+  int prioridades = atoi(argv[3]);
 
-  signal(SIGTERM, handler);
+  if (copias < 1) {
+    perror("copias no puede ser negativo\n");
+    exit(1);
+  }
+//   if (prioridades != 1 | prioridades != 0) {
+//     perror("el tercer valor solo pude ser 1 o 0\n");
+//     exit(1);
+//   }
 
- 
-  struct tms buf;
   pid_t hijos[copias];
 
-  int tiempoMuerto = atoi(argv[2]);
+  signal(SIGTERM, handler);
+  //crear contador que dicte la prioridad
 
   for (int i = 0; i < copias; i++) {
     hijos[i] = fork();
 
     if (hijos[i] == 0) {
+      if (prioridades == 1) {
+        setpriority(PRIO_PROCESS, hijos[i], -20);
+        // esta linea hace que cada proceso tenga menos prioridad que el
+        // anterior
+      }
       busywork();
     }
   }
-  if(tiempoMuerto!=0){
+  if (tiempoMuerto != 0) {
     sleep(tiempoMuerto);
     for (int i = 0; i < copias; i++) {
-  
-    kill(hijos[i], SIGTERM);
-  
+
+      kill(hijos[i], SIGTERM);
     }
-  }
-  else {
-  busywork();
+  } else {
+    busywork();
   }
   // aca asesino a todos los hijos, despues del tiempo
   // prioridad: basicamente hacer que los procesos tengan
