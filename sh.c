@@ -66,8 +66,10 @@ void runcmd(struct cmd *cmd)
             ecmd = (struct execcmd *) cmd;
             if (ecmd->argv[0] == 0)
                 exit(0);
-            fprintf(stderr, "exec not implemented\n");
+            //fprintf(stderr, "exec not implemented\n");
             // Your code here ...
+                execvp( ecmd->argv[0], ecmd->argv); // uso execvp porque busca el comando en el PATH y no requiere la ruta completa
+                perror("execvp failed");
             break;
 
         case REDIR:
