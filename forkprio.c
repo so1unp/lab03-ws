@@ -36,41 +36,38 @@ int main(int argc, char *argv[]) {
     perror("copias no puede ser negativo\n");
     exit(1);
   }
-//   if (prioridades != 1 | prioridades != 0) {
-//     perror("el tercer valor solo pude ser 1 o 0\n");
-//     exit(1);
-//   }
+
 
   pid_t hijos[copias];
 
   signal(SIGTERM, handler);
-  //crear contador que dicte la prioridad
+  // crear contador que dicte la prioridad
 
   for (int i = 0; i < copias; i++) {
     hijos[i] = fork();
 
     if (hijos[i] == 0) {
       if (prioridades == 1) {
-        setpriority(PRIO_PROCESS, hijos[i], -20);
+        setpriority(PRIO_PROCESS, hijos[i], 0 - i);
         // esta linea hace que cada proceso tenga menos prioridad que el
         // anterior
       }
       busywork();
     }
   }
-  if (tiempoMuerto != 0) {
-    sleep(tiempoMuerto);
-    for (int i = 0; i < copias; i++) {
+  if (tiempoMuerto == 0) {
+    // aca tendria que hacer algo para mantener al padre ocupado mientras,
+    // si el padre muere tienen que morir los hijos, revisar el handler
+  }
+  sleep(tiempoMuerto);
+  for (int i = 0; i < copias; i++) {
 
-      kill(hijos[i], SIGTERM);
-    }
-  } else {
-    busywork();
+    kill(hijos[i], SIGTERM);
   }
   // aca asesino a todos los hijos, despues del tiempo
   // prioridad: basicamente hacer que los procesos tengan
   // prioridad en el tiempo de cpu
-
+  // como hago que con tiempo muerto 0 matar al padre?
   // poner un handle en p2, cuando llega la senal print del estatus
 
   exit(EXIT_SUCCESS);
