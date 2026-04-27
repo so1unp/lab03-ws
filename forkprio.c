@@ -1,4 +1,5 @@
 
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,19 +7,19 @@
 #include <sys/times.h> // times()
 #include <unistd.h>
 
-volatile sig_atomic_t unprocessedSig = 0;
-
 int busywork(void) {
 
-  struct sigaction act;
-  struct tms buf;
   for (;;) {
   }
 }
-void handler(int signo) {
+void handler_padre() { kill(0, SIGINT); }
+
+void handler() {
   struct rusage usage;
   getrusage(RUSAGE_SELF, &usage);
-  printf("soy el hijo %d  tiempo activo %ld \n", getpid(),
+
+  printf("soy el hijo %d prioridad %d tiempo activo %ld \n", getpid(),
+         getpriority(PRIO_PROCESS, (id_t)getpid()),
          usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
   // siendo usage.ru_utime el tiempo que mi cpu ejecuto el loop infinito
   // y usage.ru_stime el tiempo que ocupo el sistema operativo en modo kernel
@@ -27,6 +28,10 @@ void handler(int signo) {
 }
 
 int main(int argc, char *argv[]) {
+  if (argc < 4) {
+    perror("uso: %s <copias> <tiempoMuerto> <prioridades>\n");
+    exit(EXIT_FAILURE);
+  }
 
   int copias = atoi(argv[1]);
   int tiempoMuerto = atoi(argv[2]);
@@ -37,10 +42,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-
   pid_t hijos[copias];
 
-  signal(SIGTERM, handler);
+  signal(SIGINT, handler);
   // crear contador que dicte la prioridad
 
   for (int i = 0; i < copias; i++) {
@@ -48,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     if (hijos[i] == 0) {
       if (prioridades == 1) {
-        setpriority(PRIO_PROCESS, hijos[i], 0 - i);
+        setpriority(PRIO_PROCESS, 0, i);
         // esta linea hace que cada proceso tenga menos prioridad que el
         // anterior
       }
@@ -56,10 +60,11 @@ int main(int argc, char *argv[]) {
     }
   }
   if (tiempoMuerto == 0) {
-    // aca tendria que hacer algo para mantener al padre ocupado mientras,
-    // si el padre muere tienen que morir los hijos, revisar el handler
+    signal(SIGINT, handler_padre);
+    busywork();
+  } else {
+    sleep((unsigned int)tiempoMuerto);
   }
-  sleep(tiempoMuerto);
   for (int i = 0; i < copias; i++) {
 
     kill(hijos[i], SIGTERM);
@@ -71,4 +76,5 @@ int main(int argc, char *argv[]) {
   // poner un handle en p2, cuando llega la senal print del estatus
 
   exit(EXIT_SUCCESS);
+  // aa
 }
