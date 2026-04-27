@@ -73,9 +73,24 @@ void runcmd(struct cmd *cmd)
             break;
 
         case REDIR:
-            fprintf(stderr, "redir not implemented\n");
-            // Your code here ...
             rcmd = (struct redircmd *) cmd;
+
+            // Abrir el archivo especificado en rcmd->file con el modo indicado en rcmd->mode
+            int fd = open(rcmd->file, rcmd->mode, 0644);
+            if (fd < 0) {
+                perror("open failed");
+                exit(1);
+            }
+
+            // Redirigir el descriptor de archivo especificado en rcmd->fd
+            if (dup2(fd, rcmd->fd) < 0) {
+                perror("dup2 failed");
+                close(fd);
+                exit(1);
+            }
+
+            close(fd);
+
             runcmd(rcmd->cmd);
             break;
 
