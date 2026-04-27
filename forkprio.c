@@ -12,7 +12,10 @@ int busywork(void) {
   for (;;) {
   }
 }
-void handler_padre() { kill(0, SIGINT); }
+void handler_padre() {
+  kill(0, SIGINT);
+  exit(EXIT_SUCCESS);
+}
 
 void handler() {
   struct rusage usage;
@@ -57,6 +60,7 @@ int main(int argc, char *argv[]) {
         // anterior
       }
       busywork();
+      _exit(0);
     }
   }
   if (tiempoMuerto == 0) {
