@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/times.h> // times()
+#include <sys/wait.h>
 #include <unistd.h>
 
 int busywork(void) {
@@ -12,22 +13,27 @@ int busywork(void) {
   for (;;) {
   }
 }
-void handler_padre() {
-  kill(0, SIGINT);
-  exit(EXIT_SUCCESS);
+void handler_padre(int signo) {
+  (void)signo;
+  signal(SIGINT, SIG_IGN); /* ignorar antes de mandar al grupo */
+  kill(0, SIGINT);         /* mandar a los hijos */
+  while (wait(NULL) > 0)   /* esperar que todos terminen */
+    ;
+  exit(EXIT_SUCCESS); // muere
 }
 
 void handler() {
   struct rusage usage;
   getrusage(RUSAGE_SELF, &usage);
 
-  printf("soy el hijo %d prioridad %d tiempo activo %ld \n", getpid(),
+  printf("Child %d (nice %2d):\t%3li\n", getpid(),
          getpriority(PRIO_PROCESS, (id_t)getpid()),
          usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
+
   // siendo usage.ru_utime el tiempo que mi cpu ejecuto el loop infinito
   // y usage.ru_stime el tiempo que ocupo el sistema operativo en modo kernel
   // la suma de ambos hace el tiempo total que ejecuto el proceso
-  exit(EXIT_SUCCESS);
+
 }
 
 int main(int argc, char *argv[]) {
@@ -48,7 +54,6 @@ int main(int argc, char *argv[]) {
   pid_t hijos[copias];
 
   signal(SIGINT, handler);
-  // crear contador que dicte la prioridad
 
   for (int i = 0; i < copias; i++) {
     hijos[i] = fork();
@@ -68,10 +73,10 @@ int main(int argc, char *argv[]) {
     busywork();
   } else {
     sleep((unsigned int)tiempoMuerto);
-  }
-  for (int i = 0; i < copias; i++) {
+    for (int i = 0; i < copias; i++) {
 
-    kill(hijos[i], SIGTERM);
+      kill(hijos[i], SIGINT);
+    }
   }
   // aca asesino a todos los hijos, despues del tiempo
   // prioridad: basicamente hacer que los procesos tengan
