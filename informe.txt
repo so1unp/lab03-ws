@@ -1,0 +1,7 @@
+Ambos aparecen en estado R (running) con flag N (nice > 0 para el hijo con prioridad). Están en R porque ambos ejecutan busywork() que consume CPU constantemente.
+
+1 — El resultado es los 10 hijos impresos ordenados por tiempo de ejecución de menor a mayor. El hijo con nice 9 ejecutó menos tiempo que el de nice 0, porque modifico la prioridad de los hijos en cada ejecucion, de manera que cada hijo tiene menos tiempo de procesamiento que el anterior.porque el scheduler CFS asigna menos tiempo de CPU a procesos con mayor nice — cada hijo tiene una prioridad menor que el anterior, por lo que acapara menos CPU.
+
+2_ todos los hijos tienen la misma prioridad (0) heredado del padre por lo tanto el cpu les da tiempo de ejecucion no hay tantas diferencias ya que los tiempos de procesamiento son parecidos.
+
+3_Al no modificar las prioridades, los tiempos de CPU consumidos por cada hijo serían equitativos. Aunque la sumatoria de estos seguiría siendo mayor al tiempo de espera del padre (debido a la ejecución en paralelo en distintos núcleos), el tiempo total de uso de CPU se repartiría de manera balanceada. Es decir, en lugar de que algunos procesos hijos acaparen más tiempo que otros, la distribución sería lo más justa posible gracias al planificador de Linux (CFS).
